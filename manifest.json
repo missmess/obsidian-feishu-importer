@@ -1,0 +1,10 @@
+{
+  "id": "feishu-importer",
+  "name": "Feishu Importer",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Import Feishu cloud docs into your local Obsidian vault as Markdown.",
+  "author": "Hermes Agent",
+  "authorUrl": "https://github.com/",
+  "isDesktopOnly": false
+}

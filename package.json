@@ -1,0 +1,32 @@
+{
+  "name": "obsidian-feishu-importer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP Obsidian plugin skeleton for importing Feishu docs into a local vault.",
+  "main": "main.js",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/url.test.ts tests/markdown.test.ts tests/feishuClient.test.ts"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "feishu",
+    "lark",
+    "markdown"
+  ],
+  "author": "Hermes Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.38.6",
+    "@types/node": "^24.0.0",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.25.5",
+    "obsidian": "^1.8.10",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  }
+}
