@@ -3,6 +3,7 @@ const FEISHU_DOC_PATTERNS = [
   /\/docs\/([A-Za-z0-9]+)/,
   /\/wiki\/([A-Za-z0-9]+)/,
 ];
+const WINDOWS_RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 
 export function parseFeishuDocUrl(input: string): { token: string; normalizedUrl: string } {
   const raw = input.trim();
@@ -32,5 +33,11 @@ export function parseFeishuDocUrl(input: string): { token: string; normalizedUrl
 
 export function sanitizeNoteTitle(title: string): string {
   const trimmed = title.trim() || "Untitled Feishu Document";
-  return trimmed.replace(/[\\/:*?"<>|#^[\]]/g, "-").replace(/\s+/g, " ").trim();
+  const sanitized = trimmed
+    .replace(/[\\/:*?"<>|#^[\]\u0000-\u001f]/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/[. ]+$/g, "")
+    .trim();
+  const safeTitle = sanitized || "Untitled Feishu Document";
+  return WINDOWS_RESERVED_NAMES.test(safeTitle) ? `${safeTitle}-` : safeTitle;
 }

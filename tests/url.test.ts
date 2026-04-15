@@ -15,3 +15,9 @@ test("parseFeishuDocUrl rejects unsupported URL", () => {
 test("sanitizeNoteTitle removes illegal filename characters", () => {
   assert.equal(sanitizeNoteTitle('Roadmap: Q3/Q4*Plan?'), 'Roadmap- Q3-Q4-Plan-');
 });
+
+test("sanitizeNoteTitle avoids Windows reserved filenames and trailing dots", () => {
+  assert.equal(sanitizeNoteTitle("CON"), "CON-");
+  assert.equal(sanitizeNoteTitle("report. "), "report");
+  assert.equal(sanitizeNoteTitle("COM1.txt"), "COM1.txt-");
+});
