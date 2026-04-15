@@ -21,7 +21,7 @@ test("blocksToMarkdown renders common Obsidian-friendly markdown", () => {
 
   assert.equal(
     markdown,
-    '# Weekly Review\n\nHello**[ world](https://example.com)**\n\n- [x] Ship MVP\n\n```ts\nconsole.log("hi")\n```\n\n![[Feishu/assets/Hero/hero.png]]\n\n> [!note] Read me\n\n> Nested body',
+    '# Weekly Review\n\nHello**[ world](https://example.com)**\n\n- [x] Ship MVP\n\n```ts\nconsole.log("hi")\n```\n\n![[Feishu/assets/Hero/hero.png]]\n\n> [!info]\n\n> Read me\n\n> Nested body',
   );
 });
 
@@ -41,6 +41,36 @@ test("collectAssetsFromBlocks walks nested children", () => {
     assets.map((asset) => asset.token),
     ["img-1", "file-1"],
   );
+});
+
+test("blocksToMarkdown renders callout blocks as grouped highlighted content", () => {
+  const markdown = blocksToMarkdown([
+    {
+      id: "1",
+      type: "callout",
+      children: [
+        { id: "2", type: "paragraph", text: [{ text: "实例地址：https://example.com" }] },
+        { id: "3", type: "paragraph", text: [{ text: "账号：main" }] },
+      ],
+    },
+  ]);
+
+  assert.equal(markdown, "> [!info]\n\n> 实例地址：https://example.com\n\n> 账号：main");
+});
+
+test("blocksToMarkdown renders quote containers as markdown quotes", () => {
+  const markdown = blocksToMarkdown([
+    {
+      id: "1",
+      type: "quoteContainer",
+      children: [
+        { id: "2", type: "paragraph", text: [{ text: "引用里的第一行" }] },
+        { id: "3", type: "paragraph", text: [{ text: "引用里的第二行" }] },
+      ],
+    },
+  ]);
+
+  assert.equal(markdown, "> 引用里的第一行\n\n> 引用里的第二行");
 });
 
 test("blocksToMarkdown renders table cells as markdown table", () => {

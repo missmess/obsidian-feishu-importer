@@ -168,3 +168,74 @@ test("FeishuClient maps table cells with row and column metadata", async () => {
   assert.equal(blocks[0]?.children?.[0]?.metadata?.row, 0);
   assert.equal(blocks[0]?.children?.[1]?.metadata?.column, 1);
 });
+
+test("FeishuClient maps table cells from table property and child ids", async () => {
+  const client = new FeishuClient({
+    baseUrl: "https://open.feishu.cn",
+    userAccessToken: "user-token",
+    requester: async () => httpOk({
+      code: 0,
+      msg: "ok",
+      data: {
+        items: [
+          {
+            block_id: "table-1",
+            block_type: 31,
+            children: ["cell-1", "cell-2"],
+            table: { property: { row_size: 1, column_size: 2 }, cells: ["cell-1", "cell-2"] },
+          },
+          {
+            block_id: "cell-1",
+            block_type: 32,
+            table_cell: { elements: [{ text_run: { content: "Key" } }] },
+          },
+          {
+            block_id: "cell-2",
+            block_type: 32,
+            table_cell: { elements: [{ text_run: { content: "Value" } }] },
+          },
+        ],
+        has_more: false,
+      },
+    }),
+  });
+
+  const blocks = await client.fetchDocumentBlocks("token-4");
+  assert.equal(blocks[0]?.type, "table");
+  assert.equal(blocks[0]?.metadata?.rows, 1);
+  assert.equal(blocks[0]?.metadata?.columns, 2);
+  assert.equal(blocks[0]?.children?.[0]?.text?.[0]?.text, "Key");
+  assert.equal(blocks[0]?.children?.[1]?.metadata?.column, 1);
+});
+
+test("FeishuClient maps quote_container blocks", async () => {
+  const client = new FeishuClient({
+    baseUrl: "https://open.feishu.cn",
+    userAccessToken: "user-token",
+    requester: async () => httpOk({
+      code: 0,
+      msg: "ok",
+      data: {
+        items: [
+          {
+            block_id: "quote-1",
+            block_type: 34,
+            children: ["text-1"],
+            quote_container: { elements: [{ text_run: { content: "Quote intro" } }] },
+          },
+          {
+            block_id: "text-1",
+            block_type: 2,
+            text: { elements: [{ text_run: { content: "Quoted body" } }] },
+          },
+        ],
+        has_more: false,
+      },
+    }),
+  });
+
+  const blocks = await client.fetchDocumentBlocks("token-5");
+  assert.equal(blocks[0]?.type, "quoteContainer");
+  assert.equal(blocks[0]?.text?.[0]?.text, "Quote intro");
+  assert.equal(blocks[0]?.children?.[0]?.type, "paragraph");
+});

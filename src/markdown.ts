@@ -76,9 +76,8 @@ function renderBlock(block: FeishuBlock, downloadedAssets: Record<string, Synced
 }
 
 function renderCallout(text: string, children: string[]): string[] {
-  const lines = [`> [!note] ${text || "Callout"}`];
-  lines.push(...prefixLines(children, "> "));
-  return lines;
+  const content = text ? [text, ...children] : children;
+  return prefixLines(["[!info]", ...content], "> ");
 }
 
 function prefixLines(lines: string[], prefix: string): string[] {

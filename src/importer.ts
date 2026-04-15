@@ -180,12 +180,21 @@ function uniqueAssets(assets: FeishuAsset[]): FeishuAsset[] {
 function buildAssetFileName(asset: FeishuAsset, downloadedName: string | undefined, contentType: string | undefined, token: string): string {
   const preferred = downloadedName || asset.name || `${asset.type}-${token}`;
   const sanitized = sanitizeNoteTitle(preferred);
+  const tokenSuffix = shortToken(token);
   if (sanitized.includes(".")) {
-    return sanitized;
+    const dotIndex = sanitized.lastIndexOf(".");
+    const name = sanitized.slice(0, dotIndex);
+    const extension = sanitized.slice(dotIndex);
+    return name.includes(tokenSuffix) ? sanitized : `${name}-${tokenSuffix}${extension}`;
   }
 
   const extension = inferExtension(asset, contentType);
-  return extension ? `${sanitized}.${extension}` : sanitized;
+  const baseName = sanitized.includes(tokenSuffix) ? sanitized : `${sanitized}-${tokenSuffix}`;
+  return extension ? `${baseName}.${extension}` : baseName;
+}
+
+function shortToken(token: string): string {
+  return token.slice(-8);
 }
 
 function inferExtension(asset: FeishuAsset, contentType: string | undefined): string | undefined {
@@ -242,7 +251,7 @@ function buildMarkdown(title: string, sourceUrl: string, token: string, revision
     `imported_at: "${importedAt}"`,
     "---",
     "",
-  ].filter(Boolean);
+  ].filter((line): line is string => line !== undefined);
 
   return `${frontmatter.join("\n")}# ${title}\n\n${body}`.trimEnd() + "\n";
 }

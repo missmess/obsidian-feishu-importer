@@ -66,6 +66,7 @@ interface RawFeishuBlock {
   ordered?: { elements?: RawTextElement[] };
   todo?: { elements?: RawTextElement[]; style?: { done?: boolean } };
   quote?: { elements?: RawTextElement[] };
+  quote_container?: { elements?: RawTextElement[] };
   code?: { elements?: RawTextElement[]; language?: string };
   callout?: { elements?: RawTextElement[]; background_color?: number; emoji_id?: string };
   divider?: Record<string, never>;
@@ -74,7 +75,17 @@ interface RawFeishuBlock {
   sheet?: Record<string, any>;
   bitable?: Record<string, any>;
   iframe?: Record<string, any>;
-  table?: { cells?: string[]; row_size?: number; column_size?: number };
+  table?: {
+    cells?: string[];
+    row_size?: number;
+    column_size?: number;
+    property?: {
+      row_size?: number;
+      column_size?: number;
+      column_width?: number[];
+      merge_info?: Array<Record<string, unknown>>;
+    };
+  };
   table_cell?: { elements?: RawTextElement[] };
 }
 
@@ -200,19 +211,39 @@ export class FeishuClient {
 function buildBlockTree(rawBlocks: RawFeishuBlock[]): FeishuBlock[] {
   const mapped = rawBlocks.map(mapBlock);
   const byId = new Map<string, FeishuBlock>();
+  const rawById = new Map<string, RawFeishuBlock>();
   const roots: FeishuBlock[] = [];
+  const attached = new Set<string>();
 
-  for (const block of mapped) {
-    byId.set(block.id, block);
+  for (let index = 0; index < mapped.length; index += 1) {
+    byId.set(mapped[index].id, mapped[index]);
+    rawById.set(mapped[index].id, rawBlocks[index]);
   }
 
   annotateTableCells(mapped, byId);
 
   for (const block of mapped) {
+    const childIds = rawById.get(block.id)?.children ?? [];
+    for (const childId of childIds) {
+      const child = byId.get(childId);
+      if (!child || attached.has(childId)) {
+        continue;
+      }
+      block.children ??= [];
+      block.children.push(child);
+      attached.add(childId);
+    }
+  }
+
+  for (const block of mapped) {
+    if (attached.has(block.id)) {
+      continue;
+    }
     if (block.parentId && byId.has(block.parentId)) {
       const parent = byId.get(block.parentId)!;
       parent.children ??= [];
       parent.children.push(block);
+      attached.add(block.id);
     } else if (block.type !== "page") {
       roots.push(block);
     }
@@ -262,6 +293,9 @@ function mapBlock(block: RawFeishuBlock): FeishuBlock {
   }
   if (block.quote) {
     return { ...base, type: block.children?.length ? "quoteContainer" : "quote", text: readText(block.quote.elements) };
+  }
+  if (block.quote_container) {
+    return { ...base, type: "quoteContainer", text: readText(block.quote_container.elements) };
   }
   if (block.code) {
     return { ...base, type: "code", text: readText(block.code.elements), language: block.code.language ?? "text" };
@@ -320,12 +354,13 @@ function mapBlock(block: RawFeishuBlock): FeishuBlock {
     };
   }
   if (block.table) {
+    const property = block.table.property;
     return {
       ...base,
       type: "table",
       metadata: {
-        rows: numberOrUndefined(block.table.row_size),
-        columns: numberOrUndefined(block.table.column_size),
+        rows: numberOrUndefined(property?.row_size ?? block.table.row_size),
+        columns: numberOrUndefined(property?.column_size ?? block.table.column_size),
         cells: block.table.cells,
       },
     };
