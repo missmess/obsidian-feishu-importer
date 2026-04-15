@@ -1,6 +1,6 @@
 {
   "name": "obsidian-feishu-importer",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "MVP Obsidian plugin skeleton for importing Feishu docs into a local vault.",
   "main": "dist/feishu-importer/main.js",
@@ -17,7 +17,7 @@
     "lark",
     "markdown"
   ],
-  "author": "Hermes Agent",
+  "author": "Leon Wang",
   "license": "MIT",
   "devDependencies": {
     "@codemirror/state": "^6.5.0",
