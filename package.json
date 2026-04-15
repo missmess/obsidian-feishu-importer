@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "MVP Obsidian plugin skeleton for importing Feishu docs into a local vault.",
-  "main": "main.js",
+  "main": "dist/feishu-importer/main.js",
   "scripts": {
     "build": "node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs",

@@ -1,6 +1,6 @@
 import { App, Modal, Notice, Plugin, Setting } from "obsidian";
 import { DEFAULT_SETTINGS, FeishuImporterSettingTab } from "./settings";
-import { importFeishuDocument } from "./importer";
+import { importFeishuDocument, syncImportedDocuments } from "./importer";
 import { clearOAuthSession, refreshOAuthToken, refreshOAuthTokenIfNeeded, startOAuthLogin } from "./oauth";
 import type { FeishuImporterSettings } from "./types";
 
@@ -45,14 +45,22 @@ export default class FeishuImporterPlugin extends Plugin {
 
     this.addCommand({
       id: "sync-last-imported-document",
-      name: "Sync last imported document",
+      name: "Sync last imported document incrementally",
       callback: async () => {
         if (!this.settings.lastImportedDocUrl) {
           new Notice("No previous Feishu document URL is stored yet.");
           return;
         }
 
-        await this.runImport(this.settings.lastImportedDocUrl);
+        await this.runImport(this.settings.lastImportedDocUrl, { incremental: true });
+      },
+    });
+
+    this.addCommand({
+      id: "sync-all-imported-documents",
+      name: "Sync all imported documents incrementally",
+      callback: async () => {
+        await this.syncAllImportedDocuments();
       },
     });
   }
@@ -65,17 +73,40 @@ export default class FeishuImporterPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  async runImport(documentUrl: string): Promise<void> {
+  async runImport(documentUrl: string, options: { incremental?: boolean } = {}): Promise<void> {
     try {
       await refreshOAuthTokenIfNeeded(this.settings, () => this.saveSettings());
-      const result = await importFeishuDocument(this.app, this.settings, documentUrl);
+      const result = await importFeishuDocument(this.app, this.settings, documentUrl, options);
       this.settings.lastImportedDocUrl = documentUrl;
       await this.saveSettings();
+      if (result.skipped) {
+        new Notice(`No changes detected for ${result.document.title}.`);
+        return;
+      }
       new Notice(`Imported ${result.document.title} to ${result.filePath}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("[feishu-importer] import failed", error);
       new Notice(`Feishu import failed: ${message}`);
+    }
+  }
+
+  async syncAllImportedDocuments(): Promise<void> {
+    if (Object.keys(this.settings.importedDocuments).length === 0) {
+      new Notice("No imported Feishu documents are tracked yet.");
+      return;
+    }
+
+    try {
+      await refreshOAuthTokenIfNeeded(this.settings, () => this.saveSettings());
+      const result = await syncImportedDocuments(this.app, this.settings);
+      await this.saveSettings();
+      const failureText = result.failed.length ? ` ${result.failed.length} failed.` : "";
+      new Notice(`Feishu sync finished. ${result.updated} updated, ${result.skipped} unchanged.${failureText}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[feishu-importer] sync all failed", error);
+      new Notice(`Feishu sync failed: ${message}`);
     }
   }
 

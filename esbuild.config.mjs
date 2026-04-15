@@ -42,6 +42,7 @@ async function copyStaticFiles() {
   await mkdir(dirname(outfile), { recursive: true });
   await cp("manifest.json", `${outdir}/manifest.json`);
   await cp("versions.json", `${outdir}/versions.json`);
+  await cp("styles.css", `${outdir}/styles.css`);
 }
 
 if (watch) {

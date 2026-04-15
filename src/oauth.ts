@@ -1,13 +1,23 @@
 import { Notice, requestUrl } from "obsidian";
-import { shell } from "electron";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import type { FeishuImporterSettings } from "./types";
 
+const { shell } = require("electron") as { shell: { openExternal: (url: string) => Promise<void> } };
+
 const DEFAULT_OAUTH_CALLBACK_PATH = "/callback";
+export const DEFAULT_OAUTH_REDIRECT_PORT = 27124;
 const OAUTH_TIMEOUT_MS = 2 * 60 * 1000;
 const REFRESH_SKEW_MS = 60 * 1000;
-export const RECOMMENDED_OAUTH_SCOPE = "docx:document:readonly offline_access";
+export const RECOMMENDED_OAUTH_SCOPES = [
+  "docx:document:readonly",
+  "docs:document.media:download",
+  "contact:user.basic_profile:readonly",
+  "offline_access",
+];
+export const RECOMMENDED_OAUTH_SCOPE = RECOMMENDED_OAUTH_SCOPES.join(" ");
+export const FEISHU_APP_CONSOLE_URL = "https://open.feishu.cn/app";
+export const FEISHU_PERMISSION_GUIDE_URL = "https://open.feishu.cn/document/uAjLw4CM/ugTN1YjL4UTN24CO1UjN/trouble-shooting/how-to-resolve-error-99991679";
 
 type OAuthTokenPayload = {
   access_token?: string;
@@ -23,14 +33,20 @@ type OAuthUserInfoPayload = {
   open_id?: string;
 };
 
-export function buildRedirectUri(settings: FeishuImporterSettings): string {
-  const port = normalizeRedirectPort(settings.oauthRedirectPort);
-  return `http://127.0.0.1:${port}${DEFAULT_OAUTH_CALLBACK_PATH}`;
+export function buildRedirectUri(): string {
+  return `http://127.0.0.1:${DEFAULT_OAUTH_REDIRECT_PORT}${DEFAULT_OAUTH_CALLBACK_PATH}`;
 }
 
-export function getEffectiveOAuthScope(settings: FeishuImporterSettings): string {
-  return settings.oauthScope.trim() || RECOMMENDED_OAUTH_SCOPE;
-}
+export const REQUIRED_PERMISSION_JSON = JSON.stringify(
+  {
+    scopes: {
+      tenant: [],
+      user: RECOMMENDED_OAUTH_SCOPES,
+    },
+  },
+  null,
+  2,
+);
 
 export function isOAuthBackedSession(settings: FeishuImporterSettings): boolean {
   return Boolean(settings.userAccessToken && settings.oauthRefreshToken);
@@ -60,7 +76,7 @@ export async function startOAuthLogin(
   }
 
   const state = randomUUID();
-  const redirectUri = buildRedirectUri(settings);
+  const redirectUri = buildRedirectUri();
   const authUrl = buildAuthorizationUrl(settings, redirectUri, state);
   const code = await waitForAuthorizationCode(redirectUri, state, authUrl);
   const tokenPayload = await fetchOAuthToken(settings, {
@@ -243,7 +259,7 @@ function buildAuthorizationUrl(settings: FeishuImporterSettings, redirectUri: st
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("state", state);
-  authUrl.searchParams.set("scope", getEffectiveOAuthScope(settings));
+  authUrl.searchParams.set("scope", RECOMMENDED_OAUTH_SCOPE);
   return authUrl.toString();
 }
 
@@ -343,12 +359,4 @@ function getAuthorizationBaseUrl(baseUrl: string): string {
   }
 
   return "https://accounts.feishu.cn/open-apis/authen/v1/index";
-}
-
-function normalizeRedirectPort(value: string): number {
-  const parsed = Number.parseInt(value.trim(), 10);
-  if (!Number.isFinite(parsed) || parsed < 1024 || parsed > 65535) {
-    throw new Error("OAuth redirect port must be a number between 1024 and 65535.");
-  }
-  return parsed;
 }

@@ -2,25 +2,32 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { FeishuClient } from "../src/feishuClient";
 
+function httpOk(json: unknown) {
+  return {
+    status: 200,
+    headers: {},
+    text: "",
+    json,
+  };
+}
+
 test("FeishuClient uses provided user access token directly", async () => {
-  const requests: Array<{ url: string; method: string; headers?: Record<string, string>; body?: string }> = [];
+  const requests: Array<{ url: string; method: string; headers?: Record<string, string> }> = [];
   const client = new FeishuClient({
     baseUrl: "https://open.feishu.cn",
     userAccessToken: "user-token",
     requester: async (request) => {
       requests.push(request);
-      return {
-        json: {
-          code: 0,
-          msg: "ok",
-          data: {
-            document: {
-              document_id: "doc-1",
-              title: "Demo",
-            },
+      return httpOk({
+        code: 0,
+        msg: "ok",
+        data: {
+          document: {
+            document_id: "doc-1",
+            title: "Demo",
           },
         },
-      };
+      });
     },
   });
 
@@ -30,111 +37,134 @@ test("FeishuClient uses provided user access token directly", async () => {
   assert.equal(requests[0]?.headers?.Authorization, "Bearer user-token");
 });
 
-test("FeishuClient prefers user access token over tenant access token", async () => {
-  const requests: Array<{ headers?: Record<string, string> }> = [];
+test("FeishuClient paginates block fetches and builds a parent-child tree", async () => {
+  const requests: string[] = [];
   const client = new FeishuClient({
     baseUrl: "https://open.feishu.cn",
     userAccessToken: "user-token",
-    tenantAccessToken: "tenant-token",
     requester: async (request) => {
-      requests.push(request);
-      return {
-        json: {
+      requests.push(request.url);
+      if (request.url.includes("page_token=next-page")) {
+        return httpOk({
           code: 0,
           msg: "ok",
           data: {
-            document: {
-              document_id: "doc-1",
-              title: "Demo",
-            },
+            items: [
+              {
+                block_id: "child-1",
+                parent_id: "callout-1",
+                block_type: 2,
+                text: { elements: [{ text_run: { content: "Nested text" } }] },
+              },
+            ],
+            has_more: false,
           },
-        },
-      };
-    },
-  });
-
-  await client.fetchDocumentMeta("token-1");
-  assert.equal(requests[0]?.headers?.Authorization, "Bearer user-token");
-});
-
-test("FeishuClient fetches tenant access token from appId and appSecret when needed", async () => {
-  const requests: Array<{ url: string; method: string; headers?: Record<string, string>; body?: string }> = [];
-  const client = new FeishuClient({
-    baseUrl: "https://open.feishu.cn",
-    appId: "cli_xxx",
-    appSecret: "secret_xxx",
-    requester: async (request) => {
-      requests.push(request);
-      if (request.url.endsWith("/open-apis/auth/v3/tenant_access_token/internal")) {
-        return {
-          json: {
-            code: 0,
-            msg: "ok",
-            tenant_access_token: "generated-token",
-            expire: 7200,
-          },
-        };
+        });
       }
 
-      return {
-        json: {
-          code: 0,
-          msg: "ok",
-          data: {
-            document: {
-              document_id: "doc-2",
-              title: "From app credentials",
+      return httpOk({
+        code: 0,
+        msg: "ok",
+        data: {
+          items: [
+            {
+              block_id: "callout-1",
+              block_type: 19,
+              children: ["child-1"],
+              callout: { elements: [{ text_run: { content: "Heads up" } }] },
             },
-          },
+          ],
+          has_more: true,
+          page_token: "next-page",
         },
-      };
+      });
     },
   });
 
-  const meta = await client.fetchDocumentMeta("token-2");
-  assert.equal(meta.title, "From app credentials");
+  const blocks = await client.fetchDocumentBlocks("token-2");
   assert.equal(requests.length, 2);
-  assert.equal(requests[0]?.method, "POST");
-  assert.equal(requests[0]?.url, "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal");
-  assert.match(requests[0]?.body ?? "", /cli_xxx/);
-  assert.equal(requests[1]?.headers?.Authorization, "Bearer generated-token");
+  assert.equal(blocks[0]?.type, "callout");
+  assert.equal(blocks[0]?.children?.[0]?.type, "paragraph");
+  assert.equal(blocks[0]?.children?.[0]?.text?.[0]?.text, "Nested text");
 });
 
-test("FeishuClient reuses fetched tenant access token for subsequent requests", async () => {
-  let authCalls = 0;
-  let docCalls = 0;
+test("FeishuClient downloads media binary", async () => {
   const client = new FeishuClient({
     baseUrl: "https://open.feishu.cn",
-    appId: "cli_xxx",
-    appSecret: "secret_xxx",
-    requester: async (request) => {
-      if (request.url.endsWith("/open-apis/auth/v3/tenant_access_token/internal")) {
-        authCalls += 1;
-        return {
-          json: {
-            code: 0,
-            msg: "ok",
-            tenant_access_token: "generated-token",
-            expire: 7200,
-          },
-        };
-      }
-
-      docCalls += 1;
-      return {
-        json: {
-          code: 0,
-          msg: "ok",
-          data: {
-            items: [],
-          },
-        },
-      };
-    },
+    userAccessToken: "user-token",
+    requester: async () => ({
+      status: 200,
+      headers: {
+        "content-type": "image/png",
+        "content-disposition": `attachment; filename="demo.png"`,
+      },
+      text: "",
+      json: {},
+      arrayBuffer: new Uint8Array([1, 2, 3]).buffer,
+    }),
   });
 
-  await client.fetchDocumentBlocks("token-2");
-  await client.fetchDocumentBlocks("token-2");
-  assert.equal(authCalls, 1);
-  assert.equal(docCalls, 2);
+  const media = await client.downloadMedia("file-token");
+  assert.equal(media.fileName, "demo.png");
+  assert.equal(media.contentType, "image/png");
+  assert.equal(new Uint8Array(media.data)[2], 3);
+});
+
+test("FeishuClient downloads media when response has no JSON payload", async () => {
+  const client = new FeishuClient({
+    baseUrl: "https://open.feishu.cn",
+    userAccessToken: "user-token",
+    requester: async () => ({
+      status: 200,
+      headers: {
+        "content-type": "image/png",
+      },
+      text: "\uFFFDPNG",
+      json: undefined,
+      arrayBuffer: new Uint8Array([137, 80, 78, 71]).buffer,
+    }),
+  });
+
+  const media = await client.downloadMedia("image-token");
+  assert.equal(media.contentType, "image/png");
+  assert.equal(new Uint8Array(media.data)[1], 80);
+});
+
+
+test("FeishuClient maps table cells with row and column metadata", async () => {
+  const client = new FeishuClient({
+    baseUrl: "https://open.feishu.cn",
+    userAccessToken: "user-token",
+    requester: async () => httpOk({
+      code: 0,
+      msg: "ok",
+      data: {
+        items: [
+          {
+            block_id: "table-1",
+            block_type: 31,
+            table: { row_size: 1, column_size: 2, cells: ["cell-1", "cell-2"] },
+          },
+          {
+            block_id: "cell-1",
+            parent_id: "table-1",
+            block_type: 32,
+            table_cell: { elements: [{ text_run: { content: "A" } }] },
+          },
+          {
+            block_id: "cell-2",
+            parent_id: "table-1",
+            block_type: 32,
+            table_cell: { elements: [{ text_run: { content: "B" } }] },
+          },
+        ],
+        has_more: false,
+      },
+    }),
+  });
+
+  const blocks = await client.fetchDocumentBlocks("token-3");
+  assert.equal(blocks[0]?.type, "table");
+  assert.equal(blocks[0]?.children?.[0]?.metadata?.row, 0);
+  assert.equal(blocks[0]?.children?.[1]?.metadata?.column, 1);
 });
