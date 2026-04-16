@@ -3,8 +3,8 @@
   "name": "Feishu Importer",
   "version": "0.1.2",
   "minAppVersion": "1.5.0",
-  "description": "Import Feishu cloud docs into your local Obsidian vault as Markdown.",
+  "description": "Import Feishu cloud docs into your local vault as Markdown.",
   "author": "Leon Wang",
-  "authorUrl": "https://github.com/missmess/obsidian-feishu-importer",
+  "authorUrl": "https://github.com/missmess",
   "isDesktopOnly": false
 }
