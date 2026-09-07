@@ -1,10 +1,10 @@
 {
   "id": "feishu-importer",
   "name": "Feishu Importer",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "minAppVersion": "1.5.0",
   "description": "Import Feishu cloud docs into your local vault as Markdown.",
   "author": "Leon Wang",
   "authorUrl": "https://github.com/missmess",
-  "isDesktopOnly": false
+  "isDesktopOnly": true
 }
