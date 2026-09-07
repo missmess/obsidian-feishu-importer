@@ -1,0 +1,55 @@
+name: Release Obsidian plugin
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18.x"
+          cache: yarn
+
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node -e "const version = require('./manifest.json').version; if (version !== process.env.RELEASE_TAG) { throw new Error(`Tag ${process.env.RELEASE_TAG} does not match manifest version ${version}`); }"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build plugin
+        run: yarn build
+
+      - name: Generate artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/feishu-importer/main.js
+            dist/feishu-importer/manifest.json
+            dist/feishu-importer/styles.css
+
+      - name: Create draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title="$GITHUB_REF_NAME" \
+            --generate-notes \
+            --draft \
+            dist/feishu-importer/main.js \
+            dist/feishu-importer/manifest.json \
+            dist/feishu-importer/styles.css
