@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type FeishuImporterPlugin from "./main";
 import type { FeishuImporterSettings } from "./types";
 import {
@@ -56,7 +56,8 @@ export class FeishuImporterSettingTab extends PluginSettingTab {
     const hero = parent.createDiv({ cls: "fi-hero" });
     const copy = hero.createDiv({ cls: "fi-hero-copy" });
     copy.createDiv({ cls: "fi-kicker", text: "Feishu Importer" });
-    copy.createEl("h2", { text: "先连接飞书，再把云文档变成本地 Markdown" });
+    const heroHeading = new Setting(copy).setName("先连接飞书，再把云文档变成本地 Markdown").setHeading();
+    heroHeading.settingEl.addClass("fi-hero-heading");
     copy.createEl("p", {
       text: "按下面 4 步完成首次配置。之后只需要在命令面板粘贴文档链接，就可以导入并增量同步。",
     });
@@ -171,7 +172,8 @@ export class FeishuImporterSettingTab extends PluginSettingTab {
     const heading = card.createDiv({ cls: "fi-card-heading" });
     heading.createSpan({ cls: "fi-step", text: step });
     const copy = heading.createDiv();
-    copy.createEl("h3", { text: title });
+    const cardHeading = new Setting(copy).setName(title).setHeading();
+    cardHeading.settingEl.addClass("fi-card-title");
     copy.createEl("p", { text: description });
     heading.createSpan({ cls: "fi-badge", text: badge });
     return card;

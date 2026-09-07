@@ -41,16 +41,20 @@
   letter-spacing: 0;
 }
 
-.feishu-importer-settings h2,
-.feishu-importer-settings h3,
 .feishu-importer-settings p {
   margin: 0;
 }
 
-.feishu-importer-settings h2 {
+.feishu-importer-settings .fi-hero-heading {
+  padding: 0;
+  border: 0;
+}
+
+.feishu-importer-settings .fi-hero-heading .setting-item-name {
   max-width: 700px;
   color: var(--text-normal);
   font-size: 28px;
+  font-weight: var(--h2-weight);
   line-height: 1.18;
   letter-spacing: 0;
 }
@@ -172,9 +176,15 @@
   font-weight: 800;
 }
 
-.feishu-importer-settings h3 {
+.feishu-importer-settings .fi-card-title {
+  padding: 0;
+  border: 0;
+}
+
+.feishu-importer-settings .fi-card-title .setting-item-name {
   color: var(--text-normal);
   font-size: 18px;
+  font-weight: var(--h3-weight);
   line-height: 1.3;
 }
 
@@ -314,6 +324,10 @@
   background: var(--background-primary);
 }
 
+.fi-full-width-input {
+  width: 100%;
+}
+
 .feishu-importer-settings .fi-field input:focus {
   border-color: var(--fi-accent);
   box-shadow: 0 0 0 2px rgba(31, 138, 112, 0.14);
@@ -449,7 +463,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .feishu-importer-settings h2 {
+  .feishu-importer-settings .fi-hero-heading .setting-item-name {
     font-size: 24px;
   }
 }

@@ -148,7 +148,7 @@ class ImportFeishuDocModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Import Feishu document" });
+    new Setting(contentEl).setName("Import Feishu document").setHeading();
 
     new Setting(contentEl)
       .setName("Document URL")
@@ -157,7 +157,7 @@ class ImportFeishuDocModal extends Modal {
         text.setPlaceholder("https://xxx.feishu.cn/docx/...").setValue(this.documentUrl).onChange((value) => {
           this.documentUrl = value.trim();
         });
-        text.inputEl.style.width = "100%";
+        text.inputEl.addClass("fi-full-width-input");
       });
 
     new Setting(contentEl)
